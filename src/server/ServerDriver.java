@@ -27,7 +27,7 @@ public class ServerDriver {
 
             ServerSocket socket = new ServerSocket(port);
             if(isV)
-                System.out.println("Server ON! \n Listening to Port # : " + port);
+                System.out.println("Server ON! \nListening to Port # : " + port);
 
             while (true){
                 count++;
