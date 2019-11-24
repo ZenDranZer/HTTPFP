@@ -41,7 +41,6 @@ public class ParallelServer implements Runnable {
             out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             String request;
             while((request = in.readLine()) != null){
-
                 if(request.endsWith("HTTP/1.1")) {
                     httpcRequest = request;
                     isHC = true;
@@ -81,6 +80,7 @@ public class ParallelServer implements Runnable {
                         count++;
                 }
             }
+
             if(isHC) {
                 if(httpcRequest.matches("(GET|POST) /(.*)")) {
                     this.httpcRequest();
@@ -95,7 +95,7 @@ public class ParallelServer implements Runnable {
                 }else if(clientRequest.startsWith("POST")) {
                     System.out.println(clientRequest.substring(5));
                     String fileName = clientRequest.substring(5);
-                    this.postServerRequest(fileName, content);
+                    postServerRequest(fileName, content);
                 }
             }
             
@@ -106,7 +106,7 @@ public class ParallelServer implements Runnable {
 
 
 
-    private synchronized void postServerRequest(String fileName, String content) throws IOException{
+    synchronized void postServerRequest(String fileName, String content) throws IOException{
         File filePath;
         BufferedWriter postWriter;
         if(isCT)
@@ -116,21 +116,29 @@ public class ParallelServer implements Runnable {
 
         if(!fileName.contains("/")) {
             try {
+                out.write("CODE 202 OK \r\n");
                 postWriter = new BufferedWriter(new FileWriter(filePath));
                 postWriter.write(content);
+                postWriter.flush();
                 out.write("POST : Done...");
                 postWriter.close();
                 model.setFiles(fileName);
+                out.write("\r\n");
+                out.write("\r\n");
+                out.flush();
+                out.close();
             } catch (FileNotFoundException e) {
-                out.write("ERROR 404");
+                out.write("ERROR 404 FILE NOT FOUND");
+                out.close();
             }
         }else {
             System.out.println("Access Denied");
-            out.write("Error: access denied");
+            out.write("ERROR 502 Access Denied");
+            out.close();
         }
     }
 
-    private synchronized void getServerRequest(String fileNam) throws IOException{
+    synchronized void getServerRequest(String fileNam) throws IOException{
 
         File filePath;
         String fileName = fileNam;
@@ -146,13 +154,14 @@ public class ParallelServer implements Runnable {
             if(filePath.exists()) {
                 if(filePath.isDirectory()) {
                     File[] listOfFiles = filePath.listFiles();
+                    out.write("CODE 202 OK \r\n");
                     for(File file : listOfFiles) {
                         if(file.isFile()) {
                             System.out.println("File  : "+file.getName());
-                            out.write("File  : "+file.getName());
+                            out.write("File  : "+file.getName()+"\r\n");
                         }else if(file.isDirectory()) {
                             System.out.println("Directory >> "+file.getName());
-                            out.write("Directory >> "+file.getName());
+                            out.write("Directory >> "+file.getName()+"\r\n");
                         }
                     }
                 }else if(filePath.isFile()) {
@@ -163,6 +172,7 @@ public class ParallelServer implements Runnable {
                     String fileDownloadName = "";
                     if(isD) {
                         fileDownloadName = model.getFileName();
+                        System.out.println(fileDownloadName);
                         if(model.dispAttachment) {
                             if(!downloadPath.exists())
                                 downloadPath.mkdir();
@@ -181,24 +191,25 @@ public class ParallelServer implements Runnable {
                         BufferedReader bufferedReader = new BufferedReader(fileReader);
                         String currentLine;
                         String fileData = null;
+                        out.write("CODE 202 OK \r\n");
                         while ((currentLine = bufferedReader.readLine()) != null) {
                             fileData = fileData + currentLine;
                             if(isD) {
-
                                 if(model.dispInline) {
                                     out.write(currentLine);
                                 }else if(model.dispAttachment) {
                                     fileWriter.println(currentLine);
                                 }
                             }else
-                                out.write(currentLine);
+                                out.write(currentLine+"\r\n");
                         }
                         if(model.dispAttachment)
                             fileWriter.close();
-                        out.write("Operation Success");
+                        out.write("Operation Successful"+"\r\n");
+                        System.out.println("Operation Successful");
                     } catch (FileNotFoundException e) {
                         System.out.println("ERROR HTTP 404");
-                        out.write("ERROR HTTP 404 : File Not Found");
+                        out.write("ERROR HTTP 404 : File Not Found"+"\r\n");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -214,6 +225,10 @@ public class ParallelServer implements Runnable {
             System.out.println("Access Denied");
             out.write("Error: access denied");
         }
+        out.write("\r\n");
+        out.write("\r\n");
+        out.flush();
+        out.close();
     }
 
     public synchronized void httpcRequest(){
@@ -241,7 +256,7 @@ public class ParallelServer implements Runnable {
         }catch (Exception e){e.printStackTrace();}
     }
 
-    private void extractDetails() {
+    void extractDetails() {
         if(httpcRequest.matches("(.*)&(.*)")) {
             String[] temp = httpcRequest.split("&");
             for(int i = 0;i<temp.length;i++) {

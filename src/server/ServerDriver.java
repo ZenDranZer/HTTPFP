@@ -34,7 +34,6 @@ public class ServerDriver {
                 Socket clientSocket = socket.accept();
                 if(isV)
                     System.out.println("Client # :" + count + " || Client Port: " + clientSocket.getPort() + " || Processing Request...");
-
                 ParallelServer p = new ParallelServer(count,clientSocket,dir,port);
                 Thread thread = new Thread(p);
                 thread.start();

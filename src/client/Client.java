@@ -35,22 +35,19 @@ public class Client {
     public void sendRequest(){
         try {
             out= new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            out.write(query);
-
+            out.write(query+"\n");
             if(isH) {
                 for (String header : headers) {
-                    out.write(header);
+                    out.write(header+"\n");
                 }
             }
             if(isC) {
                 out.write("-d"+data);
             }
-
+            out.write("\r\n");
             out.write("\r\n");
             out.flush();
             this.printOutput();
-            out.close();
-            socket.close();
         }catch (Exception e){e.printStackTrace();}
     }
 
@@ -61,7 +58,8 @@ public class Client {
             while((output = br.readLine()) != null) {
                 System.out.println(output);
             }
-
+            socket.close();
+            out.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
